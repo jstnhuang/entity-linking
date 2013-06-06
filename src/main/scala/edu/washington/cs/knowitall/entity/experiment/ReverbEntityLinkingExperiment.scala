@@ -74,21 +74,6 @@ class ReverbEntityLinkingExperiment(linkerSupportPath: File) {
   }
   
   /**
-   * Entity link the given lines, which are serialized ReVerb extraction groups.
-   */
-  def linkGroups(lines: Iterator[String]) = {
-    lines.flatMap({ line =>
-      val group = ReVerbExtractionGroup.deserializeFromString(line)
-      group match {
-        case Some(reg) => Some(linkGroup(reg))
-        case None => {
-          System.err.println("Error parsing group: %s".format(line)); None
-        }
-      }
-    })
-  }
-  
-  /**
    * Run the entity linker for the given input and output files.
    */
   def run(inputPath: File, outputPath: File) = {
