@@ -88,20 +88,10 @@ class ReverbEntityLinkingExperiment(linkerSupportPath: File) {
     })
   }
   
-  def outputGroups(writer: BufferedWriter, groups: Iterator[ReverbExtractionGroup]) = {
-    groups.foreach { group =>
-      writer.write(ReVerbExtractionGroup.serializeToString(group))
-      writer.newLine()
-    }
-  }
-  
+  /**
+   * Run the entity linker for the given input and output files.
+   */
   def run(inputPath: File, outputPath: File) = {
-    val updatedGroups = linkGroups(Source.fromFile(inputPath).getLines())
-    val writer = new BufferedWriter(new FileWriter(outputPath))
-    outputGroups(writer, updatedGroups)
-  }
-  
-  def run2(inputPath: File, outputPath: File) = {
     val writer = new BufferedWriter(new FileWriter(outputPath))
     Source.fromFile(inputPath).getLines().foreach({ line =>
       val group = ReVerbExtractionGroup.deserializeFromString(line)
@@ -141,6 +131,6 @@ object ReverbEntityLinkingExperiment {
     }
 
     val experiment = new ReverbEntityLinkingExperiment(new File(linkerSupportPath))
-    experiment.run2(new File(inputFile), new File(outputPath))
+    experiment.run(new File(inputFile), new File(outputPath))
   }
 }
