@@ -18,6 +18,7 @@ import java.io.FileWriter
 import edu.knowitall.browser.entity.EntityTyper
 import edu.knowitall.browser.entity.CrosswikisCandidateFinder
 import edu.knowitall.browser.entity.batch_match
+import edu.knowitall.browser.entity.StringMatchCandidateFinder
 
 /**
  * Class that will run an entity linking experiment, given the path with all the supporting files.
@@ -28,6 +29,12 @@ class ReverbEntityLinkingExperiment(linkerSupportPath: File) {
     new CrosswikisCandidateFinder(linkerSupportPath, 0.01, 10),
     new EntityTyper(linkerSupportPath)
   )
+  val stringMatchLinker = new EntityLinker(
+    new batch_match(linkerSupportPath),
+    new StringMatchCandidateFinder(linkerSupportPath),
+    new EntityTyper(linkerSupportPath)
+  )
+  
   // Not to be confused with the ReVerbExtractionGroup object.
   type ReverbExtractionGroup = ExtractionGroup[ReVerbExtraction]
   
@@ -48,12 +55,12 @@ class ReverbEntityLinkingExperiment(linkerSupportPath: File) {
    * Finds entity links for the given group. The argument strings are taken from the first instance
    * in the group.
    */
-  def linkGroup(reg: ReverbExtractionGroup, useNormalization: Boolean = true):
+  def linkGroup(linker: EntityLinker, reg: ReverbExtractionGroup, useNormalization: Boolean = true):
       ReverbExtractionGroup = {
     val (arg1Text, arg2Text) = if(useNormalization) {
       val arg1Tokens = reg.instances.head.extraction.arg1Tokens
       val arg2Tokens = reg.instances.head.extraction.arg2Tokens
-      val candidateFinder = crosswikisLinker.candidateFinder
+      val candidateFinder = linker.candidateFinder
       (
         HeadPhraseFinder.getHeadPhrase(arg1Tokens, candidateFinder),
         HeadPhraseFinder.getHeadPhrase(arg2Tokens, candidateFinder)
@@ -63,8 +70,8 @@ class ReverbEntityLinkingExperiment(linkerSupportPath: File) {
     }
     
     val context = reg.instances.map(_.extraction.sentenceText).toSeq
-    val arg1Link = crosswikisLinker.getBestEntity(arg1Text, context)
-    val arg2Link = crosswikisLinker.getBestEntity(arg2Text, context)
+    val arg1Link = linker.getBestEntity(arg1Text, context)
+    val arg2Link = linker.getBestEntity(arg2Text, context)
     val (arg1Entity, arg1Types) = convertLinkToEntity(arg1Link)
     val (arg2Entity, arg2Types) = convertLinkToEntity(arg2Link)
     val updatedArg1 = ExtractionArgument(reg.arg1.norm, arg1Entity, arg1Types)
@@ -82,7 +89,7 @@ class ReverbEntityLinkingExperiment(linkerSupportPath: File) {
       val group = ReVerbExtractionGroup.deserializeFromString(line)
       group match {
         case Some(reg) => {
-          val updatedGroup = linkGroup(reg)
+          val updatedGroup = linkGroup(stringMatchLinker, reg, useNormalization=false)
           writer.write(ReVerbExtractionGroup.serializeToString(updatedGroup))
           writer.newLine()
         }
